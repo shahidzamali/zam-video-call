@@ -12,11 +12,13 @@ dotenv.config();
 const app = express();
 const server = createServer(app);
 
+// ================= DEBUG =================
+console.log("PORT =", process.env.PORT || "NOT FOUND");
+console.log("MONGO_URI =", process.env.MONGO_URI ? "FOUND" : "NOT FOUND");
+// =========================================
+
 // Socket connection
 connectToSocket(server);
-
-// App config
-app.set("port", process.env.PORT || 8000);
 
 // Middlewares
 app.use(cors());
@@ -26,19 +28,24 @@ app.use(express.urlencoded({ limit: "40kb", extended: true }));
 // Routes
 app.use("/api/v1/users", userRoutes);
 
-// Server + DB start
+// ================= START SERVER =================
 const start = async () => {
   try {
-    const connectionDb = await mongoose.connect(process.env.MONGO_URI);
+    if (!process.env.MONGO_URI) {
+      throw new Error("MONGO_URI missing in environment variables");
+    }
 
-    console.log(`MONGO Connected DB Host: ${connectionDb.connection.host}`);
+    await mongoose.connect(process.env.MONGO_URI);
+    console.log("✅ MongoDB connected");
 
-    server.listen(app.get("port"), () => {
-      console.log(`LISTENING ON PORT ${app.get("port")}`);
+    const PORT = process.env.PORT || 8000;
+
+    server.listen(PORT, "0.0.0.0", () => {
+      console.log(`🚀 Server running on port ${PORT}`);
     });
 
   } catch (error) {
-    console.error("❌ Database connection failed", error);
+    console.error("❌ Database connection failed:", error.message);
     process.exit(1);
   }
 };
